@@ -1,0 +1,22 @@
+{
+  "name": "snakes-and-ladders-server",
+  "version": "1.0.0",
+  "description": "خادم ألعاب السلم والثعبان 3D - أونلاين",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "nodejs",
+    "socket.io",
+    "game-server",
+    "snakes-and-ladders"
+  ],
+  "author": "هيثم زيدان",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}

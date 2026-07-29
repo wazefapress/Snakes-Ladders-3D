@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة السلم والثعبان 3D الإحترافية</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+        #game-layout {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        #canvas-container {
+            width: 100%;
+            height: 450px;
+            background-color: #1a1a2e;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .controls-card {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .log-box {
+            height: 120px;
+            overflow-y: auto;
+            background: #e9ecef;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 0.9em;
+            border-right: 4px solid #0d6efd;
+        }
+        .dice-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #dc3545;
+            background: #f8f9fa;
+            padding: 0 15px;
+            border-radius: 10px;
+            border: 2px solid #dee2e6;
+            text-align: center;
+        }
+        footer {
+            margin-top: 30px;
+            padding: 15px;
+            text-align: center;
+            background: #343a40;
+            color: white;
+            border-radius: 10px 10px 0 0;
+        }
+        footer a {
+            color: #ffc107;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-layout" class="d-flex flex-column p-3 gap-3">
+    <div class="text-center">
+        <h2 class="text-primary fw-bold">لعبة السلم والثعبان 3D</h2>
+    </div>
+
+    <!-- حاوية اللعبة ثلاثية الأبعاد -->
+    <div id="canvas-container"></div>
+
+    <!-- لوحة التحكم والخيارات -->
+    <div class="controls-card p-3 d-flex flex-column gap-3">
+        <div class="row g-2">
+            <div class="col-12">
+                <input type="text" id="playerName" class="form-control" placeholder="أدخل اسمك هنا..." value="اللاعب 1">
+            </div>
+            <div class="col-6">
+                <select id="gameMode" class="form-select">
+                    <option value="cpu">ضد الكمبيوتر</option>
+                    <option value="online">أونلاين (غرفة)</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <select id="playersCount" class="form-select">
+                    <option value="2">2 لاعبين</option>
+                    <option value="3">3 لاعبين</option>
+                    <option value="4">4 لاعبين</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- خيارات الأونلاين -->
+        <div id="onlineControls" class="d-none d-flex flex-column gap-2">
+            <button class="btn btn-warning w-100" onclick="handleCreateRoom()">إنشاء غرفة جديدة</button>
+            <div class="input-group">
+                <input type="text" id="roomCode" class="form-control" placeholder="كود الغرفة">
+                <button class="btn btn-outline-secondary" onclick="copyRoomCode()">نسخ</button>
+            </div>
+            <button class="btn btn-info w-100" onclick="handleJoinRoom()">الانضمام للغرفة 🎮</button>
+        </div>
+
+        <!-- زر رمي النرد والنتيجة -->
+        <div class="d-flex justify-content-between align-items-center mt-2">
+            <button id="rollDiceBtn" class="btn btn-danger btn-lg w-50" onclick="rollDice()">رمي النرد 🎲</button>
+            <div class="dice-display w-40" id="diceResult">-</div>
+        </div>
+
+        <!-- سجل الأحداث -->
+        <div class="log-box mt-2" id="gameLog">
+            <div class="text-muted">أهلاً بك! اللوحة مرقمة ومستعدة للبدء.</div>
+        </div>
+        
+        <button class="btn btn-success w-100" onclick="shareGame()">مشاركة اللعبة 🔗</button>
+    </div>
+
+    <!-- حقوق التطوير -->
+    <footer>
+        تطوير وتصميم: <a href="https://www.patreon.com/" target="_blank">هيثم زيدان</a> &copy; 2026
+    </footer>
+</div>
+
+<!-- المكتبات المطلوبة -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<script>
+    // --- ثوابت وقوانين اللعبة ---
+    const LADDERS = { 8: 26, 21: 42, 36: 76, 51: 69, 62: 83, 80: 99 };
+    const SNAKES = { 34: 12, 48: 25, 64: 40, 79: 35, 89: 67, 97: 86 };
+    
+    let players = [];
+    let currentPlayerIndex = 0;
+    let gameStarted = false;
+    let diceMesh;
+    let isRolling = false;
+
+    // إعدادات الأونلاين
+    const socket = io('http://localhost:3000'); // استبدل الرابط برابط الخادم الفعلي عند الرفع
+    let currentRoom = null;
+    let myPlayerIndex = 0;
+    let isMyTurn = true;
+
+    // --- إعداد بيئة Three.js ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a2e);
+
+    const camera = new THREE.PerspectiveCamera(48, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 11.5, 0.5); // رؤية علوية مواجهة للشاشة تماماً
+    camera.up.set(0, 0, -1);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    dirLight.position.set(2, 10, 2);
+    scene.add(dirLight);
+
+    // --- توليد أوجه النرد ورسومات اللوحة ---
+    function createDiceFaceTexture(number) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 128; canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 128, 128);
+        ctx.fillStyle = '#000000';
+        const dots = {
+            1: [[64, 64]], 2: [[32, 32], [96, 96]], 3: [[32, 32], [64, 64], [96, 96]],
+            4: [[32, 32], [32, 96], [96, 32], [96, 96]], 5: [[32, 32], [32, 96], [64, 64], [96, 32], [96, 96]],
+            6: [[32, 32], [32, 64], [32, 96], [96, 32], [96, 64], [96, 96]]
+        };
+        (dots[number] || []).forEach(coord => {
+            ctx.beginPath(); ctx.arc(coord[0], coord[1], 16, 0, Math.PI * 2); ctx.fill();
+        });
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    function createNumberTexture(number, bgColor) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 128; canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = bgColor; ctx.fillRect(0, 0, 128, 128);
+        ctx.font = 'bold 55px Arial'; ctx.fillStyle = '#111';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(number, 64, 64);
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    // --- بناء اللوحة والمربعات (1 إلى 100) ---
+    const tileSize = 1;
+    const cells = {}; 
+    const boardGroup = new THREE.Group();
+
+    for (let i = 0; i < 100; i++) {
+        let row = Math.floor(i / 10);
+        let col = i % 10;
+        if (row % 2 !== 0) col = 9 - col;
+
+        const x = (col - 4.5) * tileSize;
+        const z = (4.5 - row) * tileSize;
+        cells[i + 1] = new THREE.Vector3(x, 0, z);
+
+        const bgColor = (row + col) % 2 === 0 ? '#ffffff' : '#dcedc8'; 
+        const geometry = new THREE.BoxGeometry(tileSize * 0.95, 0.2, tileSize * 0.95);
+        const texture = createNumberTexture(i + 1, bgColor);
+        
+        const topMat = new THREE.MeshLambertMaterial({ map: texture });
+        const sideMat = new THREE.MeshLambertMaterial({ color: bgColor });
+        const tile = new THREE.Mesh(geometry, [sideMat, sideMat, topMat, sideMat, sideMat, sideMat]);
+        tile.position.set(x, 0, z);
+        boardGroup.add(tile);
+    }
+    scene.add(boardGroup);
+
+    // --- رسم السلالم ---
+    const drawLadder = (start, end) => {
+        const startPos = cells[start], endPos = cells[end];
+        const distance = startPos.distanceTo(endPos);
+        const direction = new THREE.Vector3().subVectors(endPos, startPos).normalize();
+        const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize().multiplyScalar(0.25);
+        const woodMat = new THREE.MeshPhongMaterial({ color: 0x8B4513 }); 
+        const midPoint = new THREE.Vector3().addVectors(startPos, endPos).multiplyScalar(0.5);
+        midPoint.y += 0.3; 
+
+        const railGeo = new THREE.CylinderGeometry(0.06, 0.06, distance, 8);
+        const rRail = new THREE.Mesh(railGeo, woodMat); rRail.position.copy(midPoint).add(right); rRail.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), direction); scene.add(rRail);
+        const lRail = new THREE.Mesh(railGeo, woodMat); lRail.position.copy(midPoint).sub(right); lRail.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), direction); scene.add(lRail);
+
+        const steps = Math.floor(distance / 0.4);
+        const rungGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.5, 8);
+        for(let i = 1; i <= steps; i++) {
+            const rungPos = new THREE.Vector3().lerpVectors(startPos, endPos, i / (steps + 1));
+            rungPos.y += 0.3;
+            const rung = new THREE.Mesh(rungGeo, woodMat); rung.position.copy(rungPos);
+            rung.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), right.clone().normalize());
+            scene.add(rung);
+        }
+    };
+    for (let start in LADDERS) drawLadder(parseInt(start), LADDERS[start]);
+
+    // --- رسم الثعابين ---
+    const drawSnake = (start, end) => {
+        const startPos = cells[start], endPos = cells[end];
+        const midX = (startPos.x + endPos.x) / 2, midZ = (startPos.z + endPos.z) / 2;
+        const curve = new THREE.CubicBezierCurve3(
+            new THREE.Vector3(startPos.x, 0.4, startPos.z),
+            new THREE.Vector3(midX + 1.5, 0.5, midZ + 1), 
+            new THREE.Vector3(midX - 1.5, 0.5, midZ - 1), 
+            new THREE.Vector3(endPos.x, 0.2, endPos.z)
+        );
+        const snakeMat = new THREE.MeshPhongMaterial({ color: 0xcc0000 }); 
+        scene.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curve.getPoints(30)), 40, 0.15, 12, false), snakeMat));
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), snakeMat);
+        head.position.copy(startPos); head.position.y += 0.4; scene.add(head);
+
+        const eyeGeo = new THREE.SphereGeometry(0.06, 8, 8); const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const e1 = new THREE.Mesh(eyeGeo, eyeMat); e1.position.set(startPos.x + 0.12, startPos.y + 0.5, startPos.z - 0.15); scene.add(e1);
+        const e2 = new THREE.Mesh(eyeGeo, eyeMat); e2.position.set(startPos.x - 0.12, startPos.y + 0.5, startPos.z - 0.15); scene.add(e2);
+    };
+    for (let start in SNAKES) drawSnake(parseInt(start), SNAKES[start]);
+
+    // --- تهيئة نرد 3D ---
+    const initDice3D = () => {
+        const mats = [
+            new THREE.MeshBasicMaterial({ map: createDiceFaceTexture(2) }),
+            new THREE.MeshBasicMaterial({ map: createDiceFaceTexture(5) }),
+            new THREE.MeshBasicMaterial({ map: createDiceFaceTexture(1) }),
+            new THREE.MeshBasicMaterial({ map: createDiceFaceTexture(6) }),
+            new THREE.MeshBasicMaterial({ map: createDiceFaceTexture(3) }),
+            new THREE.MeshBasicMaterial({ map: createDiceFaceTexture(4) })
+        ];
+        diceMesh = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), mats);
+        diceMesh.position.set(0, 0.4, 4.2);
+        scene.add(diceMesh);
+    };
+    initDice3D();
+
+    const faceRotations = {
+        1: { x: 0, y: 0, z: 0 }, 2: { x: 0, y: -Math.PI / 2, z: 0 },
+        3: { x: -Math.PI / 2, y: 0, z: 0 }, 4: { x: Math.PI / 2, y: 0, z: 0 },
+        5: { x: 0, y: Math.PI / 2, z: 0 }, 6: { x: Math.PI, y: 0, z: 0 }
+    };
+
+    const rollDice3DAnimation = (finalValue, onComplete) => {
+        if (isRolling) return;
+        isRolling = true;
+        let startT = performance.now();
+        let rX = (Math.random() + 1) * 20, rY = (Math.random() + 1) * 20;
+
+        const animateRoll = (t) => {
+            let progress = (t - startT) / 1000;
+            if (progress < 1) {
+                diceMesh.rotation.x += rX * 0.05; diceMesh.rotation.y += rY * 0.05;
+                diceMesh.position.y = 0.4 + Math.sin(progress * Math.PI * 4) * 0.8;
+                requestAnimationFrame(animateRoll);
+            } else {
+                const target = faceRotations[finalValue];
+                diceMesh.rotation.set(target.x, target.y, target.z);
+                diceMesh.position.y = 0.4;
+                isRolling = false;
+                if (onComplete) onComplete();
+            }
+        };
+        requestAnimationFrame(animateRoll);
+    };
+
+    // --- إدارة اللاعبين والحركة ---
+    const playerColors = [0x007bff, 0xffc107, 0x00ff00, 0x6610f2];
+    const playerMeshes = [];
+
+    const initPlayers = (count, playerName) => {
+        players = [];
+        playerMeshes.forEach(m => scene.remove(m));
+        playerMeshes.length = 0;
+
+        for (let i = 0; i < count; i++) {
+            const name = i === 0 ? (playerName || "اللاعب 1") : `الكمبيوتر ${i}`;
+            const type = i === 0 ? "human" : "cpu";
+            players.push({ id: i, name: name, position: 0, type: type });
+            
+            const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshPhongMaterial({ color: playerColors[i] }));
+            sphere.position.set(-6 + i*0.6, 0.3, 5); 
+            scene.add(sphere);
+            playerMeshes.push(sphere);
+        }
+        gameStarted = true;
+        logMessage(`تم بدء اللعبة! الدور لـ: ${players[0].name}`);
+    };
+
+    const movePlayerMesh = (playerIndex, cellNumber) => {
+        if(cellNumber > 0 && cellNumber <= 100) {
+            const pos = cells[cellNumber];
+            playerMeshes[playerIndex].position.set(pos.x + ((playerIndex % 2 === 0)?0.2:-0.2), 0.45, pos.z + ((playerIndex >= 2)?0.2:-0.2));
+        }
+    };
+
+    // --- منطق اللعب وأوضاع الاتصال ---
+    document.getElementById('gameMode').addEventListener('change', (e) => {
+        document.getElementById('onlineControls').classList.toggle('d-none', e.target.value !== 'online');
+    });
+
+    const handleCreateRoom = () => {
+        socket.emit('createRoom', { name: document.getElementById('playerName').value || "اللاعب 1" });
+    };
+
+    const handleJoinRoom = () => {
+        const roomCode = document.getElementById('roomCode').value.trim();
+        if (!roomCode) return alert("أدخل كود الغرفة أولاً!");
+        socket.emit('joinRoom', { roomCode, playerData: { name: document.getElementById('playerName').value || "لاعب" } });
+    };
+
+    socket.on('roomCreated', (data) => {
+        currentRoom = data.roomCode;
+        document.getElementById('roomCode').value = currentRoom;
+        myPlayerIndex = 0;
+        logMessage(`أنشئت الغرفة: ${currentRoom}. بانتظار الخصم...`);
+    });
+
+    socket.on('gameStart', (data) => {
+        gameStarted = true;
+        players = data.players.map((p, idx) => ({ id: idx, name: p.name, position: 0, type: 'online' }));
+        initOnlinePlayersVisuals(data.players.length);
+        updateTurnStatus(data.turnIndex);
+        logMessage("بدأت اللعبة أونلاين!");
+    });
+
+    const initOnlinePlayersVisuals = (count) => {
+        playerMeshes.forEach(m => scene.remove(m));
+        playerMeshes.length = 0;
+        for (let i = 0; i < count; i++) {
+            const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshPhongMaterial({ color: playerColors[i] }));
+            sphere.position.set(-6 + i*0.6, 0.3, 5);
+            scene.add(sphere);
+            playerMeshes.push(sphere);
+        }
+    };
+
+    socket.on('diceRolledResult', (data) => {
+        rollDice3DAnimation(data.diceValue, () => {
+            document.getElementById('diceResult').innerText = data.diceValue;
+            const player = players[data.playerIndex];
+            executeMovement(player, data.diceValue, () => {
+                updateTurnStatus(data.nextTurnIndex);
+            });
+        });
+    });
+
+    const updateTurnStatus = (turnIndex) => {
+        isMyTurn = (myPlayerIndex === turnIndex);
+        const btn = document.getElementById('rollDiceBtn');
+        btn.disabled = !isMyTurn;
+        btn.className = isMyTurn ? "btn btn-danger btn-lg w-50" : "btn btn-secondary btn-lg w-50";
+    };
+
+    const rollDice = () => {
+        const mode = document.getElementById('gameMode').value;
+        if (mode === 'online') {
+            if (!currentRoom || !isMyTurn) return;
+            socket.emit('rollDiceRequest', { roomCode: currentRoom });
+        } else {
+            const playerName = document.getElementById('playerName').value;
+            const pCount = parseInt(document.getElementById('playersCount').value);
+            if (!gameStarted) initPlayers(pCount, playerName);
+
+            const currentPlayer = players[currentPlayerIndex];
+            if (currentPlayer.type === 'cpu') return;
+
+            const diceValue = Math.floor(Math.random() * 6) + 1;
+            rollDice3DAnimation(diceValue, () => {
+                document.getElementById('diceResult').innerText = diceValue;
+                executeMovement(currentPlayer, diceValue, () => {
+                    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+                    if (players[currentPlayerIndex].type === 'cpu' && gameStarted) {
+                        setTimeout(() => {
+                            const cpuDice = Math.floor(Math.random() * 6) + 1;
+                            rollDice3DAnimation(cpuDice, () => {
+                                document.getElementById('diceResult').innerText = cpuDice;
+                                executeMovement(players[currentPlayerIndex], cpuDice, () => {
+                                    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+                                });
+                            });
+                        }, 1000);
+                    }
+                });
+            });
+        }
+    };
+
+    const executeMovement = (player, diceValue, callback) => {
+        let newPos = player.position + diceValue;
+        if (newPos > 100) {
+            logMessage(`${player.name} يحتاج لرقم دقيق للوصول لـ 100.`);
+            if (callback) callback();
+        } else {
+            logMessage(`🎲 ${player.name} رمى ${diceValue} وانتقل للمربع ${newPos}.`);
+            player.position = newPos;
+            movePlayerMesh(player.id, player.position);
+
+            setTimeout(() => {
+                if (LADDERS[player.position]) {
+                    logMessage(`🧗 رائع! صعد السلم إلى ${LADDERS[player.position]}`);
+                    player.position = LADDERS[player.position];
+                    movePlayerMesh(player.id, player.position);
+                } else if (SNAKES[player.position]) {
+                    logMessage(`🐍 أوه لا! انزلق مع الثعبان إلى ${SNAKES[player.position]}`);
+                    player.position = SNAKES[player.position];
+                    movePlayerMesh(player.id, player.position);
+                }
+
+                if (player.position === 100) {
+                    playWinSound();
+                    logMessage(`🏆 فاز ${player.name} باللعبة!`);
+                    alert(`مبروك الفوز: ${player.name}`);
+                    gameStarted = false;
+                }
+                if (callback) callback();
+            }, 600);
+        }
+    };
+
+    const logMessage = (msg) => {
+        const box = document.getElementById('gameLog');
+        box.innerHTML = `<div class="mb-1">> ${msg}</div>` + box.innerHTML;
+    };
+
+    const playWinSound = () => {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator(); const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.5);
+        gain.gain.setValueAtTime(1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 1);
+    };
+
+    const copyRoomCode = () => {
+        const code = document.getElementById("roomCode");
+        if(code.value) { code.select(); document.execCommand("copy"); alert("تم النسخ: " + code.value); }
+    };
+
+    const shareGame = () => {
+        if (navigator.share) navigator.share({ title: 'لعبة السلم والثعبان 3D', url: window.location.href });
+        else alert("المشاركة غير مدعومة في متصفحك.");
+    };
+
+    // حلقة العرض 3D
+    const animate = () => {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+    };
+    animate();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+</script>
+</body>
+</html>
