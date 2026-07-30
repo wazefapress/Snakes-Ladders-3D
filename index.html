@@ -8,7 +8,18 @@
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
         #game-layout { max-width: 700px; margin: 0 auto; }
-        #canvas-container { width: 100%; height: 450px; background-color: #1a1a2e; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2); position: relative; }
+      #canvas-container { 
+            width: 100%; 
+            height: 50vh; /* يأخذ 50% من طول الشاشة ليناسب الوضع العمودي */
+            min-height: 350px; 
+            max-height: 600px;
+            background-color: #1a1a2e; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+            position: relative; 
+        }
+        
         canvas { display: block; width: 100%; height: 100%; }
         .controls-card { background: #ffffff; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .log-box { height: 120px; overflow-y: auto; background: #e9ecef; border-radius: 5px; padding: 10px; font-size: 0.9em; border-right: 4px solid #0d6efd; }
@@ -61,7 +72,7 @@
     </div>
 
     <footer>
-        تطوير وتصميم: <a href="https://www.patreon.com/" target="_blank">هيثم زيدان</a> &copy; 2026
+        تطوير وتصميم: <a href="https://www.patreon.com/haythamzeidan" target="_blank">هيثم زيدان</a> &copy; 2026
     </footer>
 </div>
 
@@ -460,10 +471,28 @@
     };
     animate();
 
-    window.addEventListener('resize', () => {
-        camera.aspect = container.clientWidth / container.clientHeight;
+    // دالة لضبط أبعاد الكاميرا واللوحة لتناسب الشاشات العمودية والعريضة
+    const adjustCamera = () => {
+        const aspect = container.clientWidth / container.clientHeight;
+        camera.aspect = aspect;
+        
+        // إذا كانت الشاشة عمودية (عرضها أصغر من طولها)
+        // نقوم بزيادة مجال الرؤية (FOV) لمنع اقتصاص اللوحة من الجوانب
+        if (aspect < 1) {
+            camera.fov = 48 / aspect; 
+        } else {
+            camera.fov = 48; // الوضع الافتراضي للشاشات العريضة
+        }
+        
         camera.updateProjectionMatrix();
         renderer.setSize(container.clientWidth, container.clientHeight);
+    };
+
+    // استدعاء الدالة فوراً عند التشغيل لضبط الأبعاد الأولية
+    adjustCamera();
+
+    // تحديث الأبعاد وتوسيع الكاميرا تلقائياً عند تدوير الهاتف أو تغيير حجم المتصفح
+    window.addEventListener('resize', adjustCamera);
     });
 </script>
 </body>
