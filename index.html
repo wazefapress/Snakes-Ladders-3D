@@ -8,9 +8,9 @@
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
         #game-layout { max-width: 700px; margin: 0 auto; }
-      #canvas-container { 
+        #canvas-container { 
             width: 100%; 
-            height: 50vh; /* يأخذ 50% من طول الشاشة ليناسب الوضع العمودي */
+            height: 50vh; 
             min-height: 350px; 
             max-height: 600px;
             background-color: #1a1a2e; 
@@ -19,7 +19,6 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
             position: relative; 
         }
-        
         canvas { display: block; width: 100%; height: 100%; }
         .controls-card { background: #ffffff; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .log-box { height: 120px; overflow-y: auto; background: #e9ecef; border-radius: 5px; padding: 10px; font-size: 0.9em; border-right: 4px solid #0d6efd; }
@@ -298,6 +297,15 @@
     });
 
     const handleCreateRoom = () => {
+        if (!socket.connected) {
+            alert("⚠️ لا يوجد اتصال بالسيرفر! تأكد من تشغيل الخادم.");
+            return;
+        }
+
+        const btn = document.querySelector('button[onclick="handleCreateRoom()"]');
+        btn.disabled = true;
+        btn.innerText = "جاري الإنشاء...";
+
         socket.emit('createRoom', { name: document.getElementById('playerName').value || "اللاعب 1" });
     };
 
@@ -308,9 +316,13 @@
     };
 
     socket.on('roomCreated', (data) => {
+        const btn = document.querySelector('button[onclick="handleCreateRoom()"]');
+        btn.disabled = false;
+        btn.innerText = "إنشاء غرفة جديدة";
+
         currentRoom = data.roomCode;
         document.getElementById('roomCode').value = currentRoom;
-        logMessage(`أنشئت الغرفة: ${currentRoom}. بانتظار الخصم...`);
+        logMessage(`✅ أنشئت الغرفة: ${currentRoom}. بانتظار الخصم...`);
     });
 
     socket.on('joinedRoom', (data) => {
@@ -318,13 +330,9 @@
         logMessage(`تم الانضمام للغرفة! اللعبة ستبدأ الآن...`);
     });
 
-    // هذا هو التعديل الأهم: التعرف على اللاعب عبر socket.id حصراً
     socket.on('gameStart', (data) => {
         gameStarted = true;
-        
-        // تحديد من أنا بناءً على المعرف الخاص بي لتفادي تداخل الأدوار
         myPlayerIndex = data.players.findIndex(p => p.id === socket.id);
-        
         players = data.players.map((p, idx) => ({ id: idx, name: p.name, position: 0, type: 'online' }));
         initOnlinePlayersVisuals();
         updateTurnStatus(data.turnIndex);
@@ -465,35 +473,27 @@
         else alert("المشاركة غير مدعومة في متصفحك.");
     };
 
+    // --- الاستجابة التلقائية للشاشات والكاميرا ---
+    const adjustCamera = () => {
+        const aspect = container.clientWidth / container.clientHeight;
+        camera.aspect = aspect;
+        if (aspect < 1) {
+            camera.fov = 48 / aspect; // توسيع الرؤية عمودياً لمنع الاقتصاص الجانبي
+        } else {
+            camera.fov = 48;
+        }
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    };
+
+    adjustCamera();
+    window.addEventListener('resize', adjustCamera);
+
     const animate = () => {
         requestAnimationFrame(animate);
         renderer.render(scene, camera);
     };
     animate();
-
-    // دالة لضبط أبعاد الكاميرا واللوحة لتناسب الشاشات العمودية والعريضة
-    const adjustCamera = () => {
-        const aspect = container.clientWidth / container.clientHeight;
-        camera.aspect = aspect;
-        
-        // إذا كانت الشاشة عمودية (عرضها أصغر من طولها)
-        // نقوم بزيادة مجال الرؤية (FOV) لمنع اقتصاص اللوحة من الجوانب
-        if (aspect < 1) {
-            camera.fov = 48 / aspect; 
-        } else {
-            camera.fov = 48; // الوضع الافتراضي للشاشات العريضة
-        }
-        
-        camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
-    };
-
-    // استدعاء الدالة فوراً عند التشغيل لضبط الأبعاد الأولية
-    adjustCamera();
-
-    // تحديث الأبعاد وتوسيع الكاميرا تلقائياً عند تدوير الهاتف أو تغيير حجم المتصفح
-    window.addEventListener('resize', adjustCamera);
-    });
 </script>
 </body>
 </html>
