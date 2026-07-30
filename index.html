@@ -516,6 +516,29 @@
         camera.updateProjectionMatrix();
         renderer.setSize(container.clientWidth, container.clientHeight);
     });
+    // الاستجابة عند نجاح الانضمام للغرفة كلاعب ثانٍ
+    socket.on('joinedRoom', (data) => {
+        currentRoom = data.roomCode;
+        myPlayerIndex = 1; // أنت اللاعب الثاني
+        isMyTurn = false;  // الدور يبدأ عادةً لصاحب الغرفة
+        logMessage(`تم الانضمام للغرفة بنجاح! بانتظار بدء اللعبة...`);
+        document.getElementById('rollDiceBtn').disabled = true;
+    });
+
+    // الاستجابة العامة لبدء اللعبة عند الطرفين
+    socket.on('gameStart', (data) => {
+        gameStarted = true;
+        players = data.players.map((p, idx) => ({ id: idx, name: p.name, position: 0, type: 'online' }));
+        initOnlinePlayersVisuals();
+        updateTurnStatus(data.turnIndex);
+        logMessage("بدأت مباراة الأونلاين (1 ضد 1)! بالتوفيق.");
+    });
+
+    // التقاط أي أخطاء قادمة من الخادم وعرضها للمستخدم
+    socket.on('error', (errMsg) => {
+        alert(errMsg);
+        logMessage(`خطأ: ${errMsg}`);
+    });
 </script>
 </body>
 </html>

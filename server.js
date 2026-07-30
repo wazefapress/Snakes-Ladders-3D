@@ -38,16 +38,18 @@ io.on('connection', (socket) => {
                 socket.emit('error', 'عذراً، اللعبة قد بدأت بالفعل!');
                 return;
             }
-            // تقييد الغرفة للاعبين اثنين فقط (1 ضد 1)
             if (room.players.length >= 2) {
-                socket.emit('error', 'عذراً، الغرفة ممتلئة (الحد الأقصى لاعبان)الت!');
+                socket.emit('error', 'عذراً، الغرفة ممتلئة!');
                 return;
             }
 
             socket.join(roomCode);
             room.players.push({ id: socket.id, name: playerData.name });
 
-            // بمجرد انضمام اللاعب الثاني تبدأ المباراة فوراً
+            // إرسال تأكيد الانضمام للاعب الثاني وتحديث البيانات
+            socket.emit('joinedRoom', { roomCode, players: room.players });
+
+            // بمجرد اكتمال اللاعبين (لاعبين اثنين)، تبدأ اللعبة فوراً للطرفين
             if (room.players.length === 2) {
                 room.gameStarted = true;
                 io.to(roomCode).emit('gameStart', { 
