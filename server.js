@@ -75,6 +75,8 @@ io.on('connection', (socket) => {
 
         const diceValue = Math.floor(Math.random() * 6) + 1;
         const rollingPlayerIndex = room.turnIndex;
+        
+        // تبديل الدور فوراً للطرف الآخر (0 يصبح 1، و 1 يصبح 0)
         room.turnIndex = (room.turnIndex + 1) % room.players.length;
 
         io.to(roomCode).emit('diceRolledResult', {

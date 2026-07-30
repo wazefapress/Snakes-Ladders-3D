@@ -401,19 +401,28 @@
         rollDice3DAnimation(data.diceValue, () => {
             document.getElementById('diceResult').innerText = data.diceValue;
             const player = players[data.playerIndex];
+            
+            // تنفيذ الحركة على اللوحة، وعند انتهائها يتم تفعيل الدور التالي
             executeMovement(player, data.diceValue, () => {
+                // تحديث الدور بناءً على ما أرسله الخادم
                 updateTurnStatus(data.nextTurnIndex);
             });
         });
     });
 
     const updateTurnStatus = (turnIndex) => {
+        // التحقق مما إذا كان الدور الحالي يعود لي بناءً على معرف اللاعب في الغرفة
         isMyTurn = (myPlayerIndex === turnIndex);
         const btn = document.getElementById('rollDiceBtn');
         btn.disabled = !isMyTurn;
         btn.className = isMyTurn ? "btn btn-danger btn-lg w-50" : "btn btn-secondary btn-lg w-50";
+        
+        if (isMyTurn) {
+            logMessage("دورك الآن! اضغط على رمي النرد 🎲.");
+        } else {
+            logMessage(`انتظر دور ${players[turnIndex] ? players[turnIndex].name : 'الخصم'}...`);
+        }
     };
-
     const rollDice = () => {
         const mode = document.getElementById('gameMode').value;
         if (mode === 'online') {
