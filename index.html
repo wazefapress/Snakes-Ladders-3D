@@ -4,69 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لعبة السلم والثعبان 3D الإحترافية</title>
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow-x: hidden;
-        }
-        #game-layout {
-            max-width: 700px;
-            margin: 0 auto;
-        }
-        #canvas-container {
-            width: 100%;
-            height: 450px;
-            background-color: #1a1a2e;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            position: relative;
-        }
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-        .controls-card {
-            background: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        .log-box {
-            height: 120px;
-            overflow-y: auto;
-            background: #e9ecef;
-            border-radius: 5px;
-            padding: 10px;
-            font-size: 0.9em;
-            border-right: 4px solid #0d6efd;
-        }
-        .dice-display {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #dc3545;
-            background: #f8f9fa;
-            padding: 0 15px;
-            border-radius: 10px;
-            border: 2px solid #dee2e6;
-            text-align: center;
-        }
-        footer {
-            margin-top: 30px;
-            padding: 15px;
-            text-align: center;
-            background: #343a40;
-            color: white;
-            border-radius: 10px 10px 0 0;
-        }
-        footer a {
-            color: #ffc107;
-            text-decoration: none;
-            font-weight: bold;
-        }
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+        #game-layout { max-width: 700px; margin: 0 auto; }
+        #canvas-container { width: 100%; height: 450px; background-color: #1a1a2e; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2); position: relative; }
+        canvas { display: block; width: 100%; height: 100%; }
+        .controls-card { background: #ffffff; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .log-box { height: 120px; overflow-y: auto; background: #e9ecef; border-radius: 5px; padding: 10px; font-size: 0.9em; border-right: 4px solid #0d6efd; }
+        .dice-display { font-size: 2rem; font-weight: bold; color: #dc3545; background: #f8f9fa; padding: 0 15px; border-radius: 10px; border: 2px solid #dee2e6; text-align: center; }
+        footer { margin-top: 30px; padding: 15px; text-align: center; background: #343a40; color: white; border-radius: 10px 10px 0 0; }
+        footer a { color: #ffc107; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -76,10 +24,8 @@
         <h2 class="text-primary fw-bold">لعبة السلم والثعبان 3D</h2>
     </div>
 
-    <!-- حاوية اللعبة ثلاثية الأبعاد -->
     <div id="canvas-container"></div>
 
-    <!-- لوحة التحكم والخيارات -->
     <div class="controls-card p-3 d-flex flex-column gap-3">
         <div class="row g-2">
             <div class="col-12">
@@ -93,7 +39,6 @@
             </div>
         </div>
 
-        <!-- خيارات الأونلاين -->
         <div id="onlineControls" class="d-none d-flex flex-column gap-2">
             <button class="btn btn-warning w-100" onclick="handleCreateRoom()">إنشاء غرفة جديدة</button>
             <div class="input-group">
@@ -103,13 +48,11 @@
             <button class="btn btn-info w-100" onclick="handleJoinRoom()">الانضمام للغرفة 🎮</button>
         </div>
 
-        <!-- زر رمي النرد والنتيجة -->
         <div class="d-flex justify-content-between align-items-center mt-2">
             <button id="rollDiceBtn" class="btn btn-danger btn-lg w-50" onclick="rollDice()">رمي النرد 🎲</button>
             <div class="dice-display w-40" id="diceResult">-</div>
         </div>
 
-        <!-- سجل الأحداث -->
         <div class="log-box mt-2" id="gameLog">
             <div class="text-muted">أهلاً بك! اللوحة مرقمة ومستعدة للبدء.</div>
         </div>
@@ -117,18 +60,15 @@
         <button class="btn btn-success w-100" onclick="shareGame()">مشاركة اللعبة 🔗</button>
     </div>
 
-    <!-- حقوق التطوير -->
     <footer>
-        تطوير وتصميم: <a href="https://www.patreon.com/haythamzeidan" target="_blank">هيثم زيدان</a> &copy; 2026
+        تطوير وتصميم: <a href="https://www.patreon.com/" target="_blank">هيثم زيدان</a> &copy; 2026
     </footer>
 </div>
 
-<!-- المكتبات المطلوبة -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 <script>
-    // --- ثوابت وقوانين اللعبة ---
     const LADDERS = { 8: 26, 21: 42, 36: 76, 51: 69, 62: 83, 80: 99 };
     const SNAKES = { 34: 12, 48: 25, 64: 40, 79: 35, 89: 67, 97: 86 };
     
@@ -136,10 +76,9 @@
     let currentPlayerIndex = 0;
     let gameStarted = false;
     let diceMesh;
-    let isRolling = false;
 
-    // إعدادات الأونلاين
-    const socket = io('https://snakes-ladders-3d.onrender.com');
+    // الاتصال بالسيرفر
+    const socket = io('http://localhost:3000');
     let currentRoom = null;
     let myPlayerIndex = 0;
     let isMyTurn = true;
@@ -163,7 +102,6 @@
     dirLight.position.set(2, 10, 2);
     scene.add(dirLight);
 
-    // --- توليد أوجه النرد ورسومات اللوحة ---
     function createDiceFaceTexture(number) {
         const canvas = document.createElement('canvas');
         canvas.width = 128; canvas.height = 128;
@@ -192,7 +130,6 @@
         return new THREE.CanvasTexture(canvas);
     }
 
-    // --- بناء اللوحة والمربعات (1 إلى 100) ---
     const tileSize = 1;
     const cells = {}; 
     const boardGroup = new THREE.Group();
@@ -218,7 +155,6 @@
     }
     scene.add(boardGroup);
 
-    // --- رسم السلالم ---
     const drawLadder = (start, end) => {
         const startPos = cells[start], endPos = cells[end];
         const distance = startPos.distanceTo(endPos);
@@ -244,7 +180,6 @@
     };
     for (let start in LADDERS) drawLadder(parseInt(start), LADDERS[start]);
 
-    // --- رسم الثعابين (بني ومرقط بالأسود) ---
     const drawSnake = (start, end) => {
         const startPos = cells[start], endPos = cells[end];
         const midX = (startPos.x + endPos.x) / 2, midZ = (startPos.z + endPos.z) / 2;
@@ -264,22 +199,18 @@
                 const spotGeo = new THREE.SphereGeometry(0.12, 8, 8);
                 const spotMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
                 const spot = new THREE.Mesh(spotGeo, spotMat);
-                spot.position.copy(pt);
-                spot.position.y += 0.05;
-                scene.add(spot);
+                spot.position.copy(pt); spot.position.y += 0.05; scene.add(spot);
             }
         });
 
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), snakeMat);
         head.position.copy(startPos); head.position.y += 0.4; scene.add(head);
-
         const eyeGeo = new THREE.SphereGeometry(0.06, 8, 8); const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
         const e1 = new THREE.Mesh(eyeGeo, eyeMat); e1.position.set(startPos.x + 0.12, startPos.y + 0.5, startPos.z - 0.15); scene.add(e1);
         const e2 = new THREE.Mesh(eyeGeo, eyeMat); e2.position.set(startPos.x - 0.12, startPos.y + 0.5, startPos.z - 0.15); scene.add(e2);
     };
     for (let start in SNAKES) drawSnake(parseInt(start), SNAKES[start]);
 
-    // --- تهيئة نرد 3D ---
     const initDice3D = () => {
         const mats = [
             new THREE.MeshBasicMaterial({ map: createDiceFaceTexture(2) }),
@@ -302,8 +233,6 @@
     };
 
     const rollDice3DAnimation = (finalValue, onComplete) => {
-        if (isRolling) return;
-        isRolling = true;
         let startT = performance.now();
         let rX = (Math.random() + 1) * 20, rY = (Math.random() + 1) * 20;
 
@@ -317,15 +246,13 @@
                 const target = faceRotations[finalValue];
                 diceMesh.rotation.set(target.x, target.y, target.z);
                 diceMesh.position.y = 0.4;
-                isRolling = false;
                 if (onComplete) onComplete();
             }
         };
         requestAnimationFrame(animateRoll);
     };
 
-    // --- إدارة اللاعبين (1 ضد 1 دائماً) ---
-    const playerColors = [0x007bff, 0xdc3545]; // الأزرق للاعب والأحمر للخصم/الكمبيوتر
+    const playerColors = [0x007bff, 0xdc3545]; 
     const playerMeshes = [];
 
     const initPlayers = (playerName) => {
@@ -333,9 +260,7 @@
         playerMeshes.forEach(m => scene.remove(m));
         playerMeshes.length = 0;
 
-        // لاعب 1
         players.push({ id: 0, name: playerName || "اللاعب 1", position: 0, type: "human" });
-        // خصم (كمبيوتر)
         players.push({ id: 1, name: "الكمبيوتر", position: 0, type: "cpu" });
 
         for (let i = 0; i < 2; i++) {
@@ -346,7 +271,7 @@
         }
         gameStarted = true;
         currentPlayerIndex = 0;
-        logMessage(`تم بدء اللعبة (1 ضد 1)! الدور لـ: ${players[0].name}`);
+        logMessage(`تم بدء اللعبة! الدور لـ: ${players[0].name}`);
     };
 
     const movePlayerMesh = (playerIndex, cellNumber) => {
@@ -356,7 +281,7 @@
         }
     };
 
-    // --- منطق اللعب وأوضاع الاتصال ---
+    // --- أوضاع اللعب والأونلاين ---
     document.getElementById('gameMode').addEventListener('change', (e) => {
         document.getElementById('onlineControls').classList.toggle('d-none', e.target.value !== 'online');
     });
@@ -374,16 +299,25 @@
     socket.on('roomCreated', (data) => {
         currentRoom = data.roomCode;
         document.getElementById('roomCode').value = currentRoom;
-        myPlayerIndex = 0;
-        logMessage(`أنشئت الغرفة: ${currentRoom}. بانتظار الخصم الانضمام...`);
+        logMessage(`أنشئت الغرفة: ${currentRoom}. بانتظار الخصم...`);
     });
 
+    socket.on('joinedRoom', (data) => {
+        currentRoom = data.roomCode;
+        logMessage(`تم الانضمام للغرفة! اللعبة ستبدأ الآن...`);
+    });
+
+    // هذا هو التعديل الأهم: التعرف على اللاعب عبر socket.id حصراً
     socket.on('gameStart', (data) => {
         gameStarted = true;
+        
+        // تحديد من أنا بناءً على المعرف الخاص بي لتفادي تداخل الأدوار
+        myPlayerIndex = data.players.findIndex(p => p.id === socket.id);
+        
         players = data.players.map((p, idx) => ({ id: idx, name: p.name, position: 0, type: 'online' }));
         initOnlinePlayersVisuals();
         updateTurnStatus(data.turnIndex);
-        logMessage("بدأت مباراة الأونلاين (1 ضد 1)!");
+        logMessage("بدأت المباراة (1 ضد 1)! بالتوفيق.");
     });
 
     const initOnlinePlayersVisuals = () => {
@@ -401,17 +335,13 @@
         rollDice3DAnimation(data.diceValue, () => {
             document.getElementById('diceResult').innerText = data.diceValue;
             const player = players[data.playerIndex];
-            
-            // تنفيذ الحركة على اللوحة، وعند انتهائها يتم تفعيل الدور التالي
             executeMovement(player, data.diceValue, () => {
-                // تحديث الدور بناءً على ما أرسله الخادم
                 updateTurnStatus(data.nextTurnIndex);
             });
         });
     });
 
     const updateTurnStatus = (turnIndex) => {
-        // التحقق مما إذا كان الدور الحالي يعود لي بناءً على معرف اللاعب في الغرفة
         isMyTurn = (myPlayerIndex === turnIndex);
         const btn = document.getElementById('rollDiceBtn');
         btn.disabled = !isMyTurn;
@@ -420,9 +350,19 @@
         if (isMyTurn) {
             logMessage("دورك الآن! اضغط على رمي النرد 🎲.");
         } else {
-            logMessage(`انتظر دور ${players[turnIndex] ? players[turnIndex].name : 'الخصم'}...`);
+            const opponent = players.find(p => p.id !== myPlayerIndex);
+            logMessage(`في انتظار رمية ${(opponent ? opponent.name : 'الخصم')}...`);
         }
     };
+
+    socket.on('error', (errMsg) => {
+        alert(errMsg); logMessage(`خطأ: ${errMsg}`);
+    });
+
+    socket.on('playerDisconnectedWin', (data) => {
+        alert(data.message); logMessage(data.message); gameStarted = false; currentRoom = null;
+    });
+
     const rollDice = () => {
         const mode = document.getElementById('gameMode').value;
         if (mode === 'online') {
@@ -524,29 +464,6 @@
         camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(container.clientWidth, container.clientHeight);
-    });
-    // الاستجابة عند نجاح الانضمام للغرفة كلاعب ثانٍ
-    socket.on('joinedRoom', (data) => {
-        currentRoom = data.roomCode;
-        myPlayerIndex = 1; // أنت اللاعب الثاني في الغرفة الثنائية
-        isMyTurn = false;  // دور البداية دائماً لصاحب الغرفة (اللاعب 0)
-        logMessage(`تم الانضمام للغرفة بنجاح! بانتظار أن يبدأ صاحب الغرفة...`);
-        document.getElementById('rollDiceBtn').disabled = true;
-        document.getElementById('rollDiceBtn').className = "btn btn-secondary btn-lg w-50";
-    });
-    // الاستجابة العامة لبدء اللعبة عند الطرفين
-    socket.on('gameStart', (data) => {
-        gameStarted = true;
-        players = data.players.map((p, idx) => ({ id: idx, name: p.name, position: 0, type: 'online' }));
-        initOnlinePlayersVisuals();
-        updateTurnStatus(data.turnIndex);
-        logMessage("بدأت مباراة الأونلاين (1 ضد 1)! بالتوفيق.");
-    });
-
-    // التقاط أي أخطاء قادمة من الخادم وعرضها للمستخدم
-    socket.on('error', (errMsg) => {
-        alert(errMsg);
-        logMessage(`خطأ: ${errMsg}`);
     });
 </script>
 </body>
